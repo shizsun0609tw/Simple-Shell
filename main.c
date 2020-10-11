@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 struct command{
 	size_t tokenNumber;
@@ -21,6 +22,7 @@ struct command Parser(char* buffer)
 	tempToken = strtok(buffer, digit);
 	input.token = (char**)malloc(sizeof(char*));	
 
+
 	while(tempToken != NULL)
 	{
 		input.token[input.tokenNumber] = (char*)malloc(sizeof(tempToken));
@@ -36,13 +38,23 @@ struct command Parser(char* buffer)
 	
 		tempToken = strtok(NULL, digit);			
 	}
-		
-	for(int i = 0; i < input.tokenNumber; ++i)
-	{
-		printf("%s\n", input.token[i]);
-	}
 	
 	return input;
+}
+
+void Execute(struct command input)
+{	
+	char** arg = (char**)malloc(sizeof(char*) * (input.tokenNumber + 1));
+	
+	for(int i = 0; i < input.tokenNumber; ++i)
+	{
+		char* argTemp = input.token[i];
+		arg[i] = argTemp;
+	}
+		
+	arg[input.tokenNumber] = NULL; 
+
+	execvp(input.token[0], arg);
 }
 
 void ShellMainLoop()
@@ -58,6 +70,8 @@ void ShellMainLoop()
 		getline(&buffer, &index, stdin);
 		
 		input = Parser(buffer);		
+		
+		Execute(input);		
 	
 		if(buffer[0] == '0')
 		{
