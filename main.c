@@ -21,7 +21,7 @@ void ShellMainLoop()
 
 int main(int argc, char ** argv, char ** envp)
 {
-	printf("Hello Shell\n");
+	printf("Welcom to Shell\n");
 
 	ShellMainLoop();	
 
