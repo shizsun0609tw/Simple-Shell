@@ -6,4 +6,4 @@ struct command{
 	char** token;
 };
 
-struct command ParserCommand(char* buffer);
+struct command ParseCommand(char* buffer);

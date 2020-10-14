@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "parser.h"
 
 struct command ParseCommand(char* buffer)
@@ -26,7 +29,7 @@ struct command ParseCommand(char* buffer)
 			input.token = (char**)realloc(input.token, sizeof(char*) * input.maxSize);
 		}
 		
-		tempToken = strtok(NULL, ditgit);
+		tempToken = strtok(NULL, digit);
 	}
 
 	return input;

@@ -11,11 +11,8 @@ CFLAGS = -g -Wall -I$(DIR_INC)
 
 TARGET = npshell
 
-all:
-	@echo $(SRC)
-
 ${TARGET}:$(OBJ)
-	$(CC) -o $@ $<
+	$(CC) -o $@ $^
 
 $(DIR_OBJ)/%.o: ${DIR_SRC}/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
