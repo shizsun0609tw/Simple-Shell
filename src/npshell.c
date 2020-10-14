@@ -17,12 +17,7 @@ void ShellMainLoop()
 		
 		input = ParseCommand(buffer);		
 		
-		Execute(input);		
-	
-		if(buffer[0] == '0')
-		{
-			break;
-		}
+		Execute(input);	
 	}		
 }
 
