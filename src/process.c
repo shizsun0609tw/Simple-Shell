@@ -9,7 +9,6 @@ void Execute(struct command input)
 {	
 	char* separation = (char*)malloc(sizeof(char));
 	char** process1 = CommandProcessing(&input, &separation);
-	int* pipefds;
 	int pastReadFd = 0;
 	int isHead = 1;
 
@@ -19,32 +18,24 @@ void Execute(struct command input)
 		
 		if (strcmp(separation, "|") == 0) 
 		{
-			if (pipefds != NULL)
-			{
-				pastReadFd = pipefds[0];
-				if (input.currentCommandNumber != input.tokenNumber) free(pipefds);
-			}
-
-			pipefds = ExePipe();			
-	
-			ExeProcess(process1, pipefds, pastReadFd, isHead, 0);
-			isHead = 0;
-			free(process1);
-			process1 = process2;
-			if (pastReadFd != 0) close(pastReadFd);	
+			pastReadFd = ExePipe(process1, pastReadFd, isHead);
 		}
 		else if (strcmp(separation, ">") == 0)
 		{
 			printf("redirection\n");
 		}
+
+		isHead = 0;
+		free(process1);
+		process1 = process2;
 	}
-		
-	ExeProcess(process1, pipefds, pastReadFd, isHead, 1);
+	
+	ExeProcess(process1, NULL, pastReadFd, isHead, 1);
+	
+	if (pastReadFd != 0) close(pastReadFd);
 
-	close(pipefds[0]);
-
-	free(pipefds);
 	free(input.token);
+	free(process1);
 }
 
 char** CommandProcessing(struct command *input, char** oSeparation)
@@ -74,16 +65,25 @@ char** CommandProcessing(struct command *input, char** oSeparation)
 	return process;
 }
 
-int* ExePipe()
+int ExePipe(char** process, int pastReadFd, int isHead)
 {
-	int *pipefds = (int*)malloc(sizeof(int) * 2);
+	int* pipefds = (int*)malloc(sizeof(int) * 2);
+	int readFd;
 
 	if (pipe(pipefds) == -1)
 	{
 		printf("pipe error\n");
 	}
 	
-	return pipefds;	
+	ExeProcess(process, pipefds, pastReadFd, isHead, 0);
+
+	readFd = pipefds[0];
+
+	if (pastReadFd != 0) close(pastReadFd);
+
+	free(pipefds);
+
+	return readFd;	
 }
 
 void ExeProcess(char** process, int *pipefds, int infd, int isHead, int isTail)
@@ -106,28 +106,32 @@ void ExeProcess(char** process, int *pipefds, int infd, int isHead, int isTail)
 
 void ExeChild(char** process, int *pipefds, int infd, int isHead, int isTail)
 {
-	if (pipefds != NULL)
+	if (isHead && isTail) execvp(process[0], process);
+
+	if (isHead)
+	{	
+		close(pipefds[0]);
+		dup2(pipefds[1], STDOUT_FILENO);
+		close(pipefds[1]);
+	}
+	else if (isTail)
 	{
-		if (isHead)
+		if (pipefds != NULL)
 		{
 			close(pipefds[0]);
-			dup2(pipefds[1], STDOUT_FILENO);
 			close(pipefds[1]);
 		}
-		else if (isTail)
-		{
-			close(pipefds[1]);
-			dup2(pipefds[0], STDIN_FILENO);
-			close(pipefds[0]);			
-		}
-		else
-		{
-			close(pipefds[0]);
-			dup2(infd, STDIN_FILENO);
-			dup2(pipefds[1], STDOUT_FILENO);
-			close(infd);
-			close(pipefds[1]);
-		}
+
+		dup2(infd, STDIN_FILENO);
+		close(infd);	
+	}
+	else
+	{
+		close(pipefds[0]);
+		dup2(infd, STDIN_FILENO);
+		dup2(pipefds[1], STDOUT_FILENO);
+		close(infd);
+		close(pipefds[1]);
 	}
 	
 	execvp(process[0], process);
@@ -137,16 +141,13 @@ void ExeParent(char** process, pid_t pid, int *pipefds)
 {
 	pid_t waitPid;
 	int status;
+
+	if (pipefds != NULL) close(pipefds[1]);
 	
 	while(1)
 	{
 		waitPid = waitpid(pid, &status, WNOHANG);
 		
-		if (pipefds != NULL)
-		{	
-			close(pipefds[1]);
-		}
-	
 		if (waitPid == pid) break;
 	}
 }

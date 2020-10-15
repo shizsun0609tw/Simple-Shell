@@ -9,6 +9,6 @@ void Execute(struct command input);
 char** CommandProcessing(struct command *input, char** oSeparation);
 
 void ExeProcess(char** process, int *pipefds, int infd, int isHead, int isTail);
-int* ExePipe();
+int  ExePipe(char** process, int pastReadFd, int isHead);
 void ExeChild(char** process, int *pipefds, int infd, int isHead, int isTail);
 void ExeParent(char** process, pid_t pid, int *pipefds);
