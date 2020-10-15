@@ -12,6 +12,7 @@ struct command ParseCommand(char* buffer)
 
 	input.tokenNumber = 0;
 	input.maxSize = 1;
+	input.currentCommandNumber = 0;
 
 	tempToken = strtok(buffer, digit);
 	input.token = (char**)malloc(sizeof(char*));

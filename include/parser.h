@@ -5,6 +5,7 @@
 struct command{
 	size_t tokenNumber;
 	size_t maxSize;
+	size_t currentCommandNumber;
 	char** token;
 };
 
