@@ -6,7 +6,7 @@
 
 void Execute(struct command input);
 
-char** CommandProcessing(struct command *input);
+char** CommandProcessing(struct command *input, char** oSeparation);
 
 void ExeProcess(char** process, int *pipefds, int infd, int isHead, int isTail);
 int* ExePipe();

@@ -7,30 +7,47 @@
 
 void Execute(struct command input)
 {	
-	char** process1 = CommandProcessing(&input);
+	char* separation = (char*)malloc(sizeof(char));
+	char** process1 = CommandProcessing(&input, &separation);
 	int* pipefds;
 	int pastReadFd = 0;
 	int isHead = 1;
 
 	while(input.currentCommandNumber != input.tokenNumber)
 	{
-		char** process2 = CommandProcessing(&input);
-		pipefds = ExePipe();
+		char** process2 = CommandProcessing(&input, &separation);	
 		
-		ExeProcess(process1, pipefds, pastReadFd, isHead, 0);
+		if (strcmp(separation, "|") == 0) 
+		{
+			if (pipefds != NULL)
+			{
+				pastReadFd = pipefds[0];
+				if (input.currentCommandNumber != input.tokenNumber) free(pipefds);
+			}
 
-		isHead = 0;
-		free(process1);	
-		process1 = process2;
-		pastReadFd = pipefds[0];
-		if(input.currentCommandNumber != input.tokenNumber) free(pipefds);
+			pipefds = ExePipe();			
+	
+			ExeProcess(process1, pipefds, pastReadFd, isHead, 0);
+			isHead = 0;
+			free(process1);
+			process1 = process2;
+			if (pastReadFd != 0) close(pastReadFd);	
+		}
+		else if (strcmp(separation, ">") == 0)
+		{
+			printf("redirection\n");
+		}
 	}
 		
 	ExeProcess(process1, pipefds, pastReadFd, isHead, 1);
+
+	close(pipefds[0]);
+
 	free(pipefds);
+	free(input.token);
 }
 
-char** CommandProcessing(struct command *input)
+char** CommandProcessing(struct command *input, char** oSeparation)
 {
 	char** process = (char**)malloc(sizeof(char*) * (input->tokenNumber + 1));
 
@@ -42,7 +59,9 @@ char** CommandProcessing(struct command *input)
 		
 		if (strcmp(argTemp, "|") == 0)
 		{
+			*oSeparation = "|";
 			process[count] = NULL;
+			
 			break;
 		}
 		else
