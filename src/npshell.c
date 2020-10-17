@@ -18,7 +18,11 @@ void ShellMainLoop()
 		struct command input;
 		size_t index = 0;
 		
-		getline(&buffer, &index, stdin);
+		if (getline(&buffer, &index, stdin) == EOF)
+		{
+			printf("\n");
+			break;
+		}
 		
 		input = ParseCommand(buffer);		
 		
