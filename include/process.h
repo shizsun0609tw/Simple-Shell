@@ -27,3 +27,4 @@ void ExePipeHead(int *pipefds, int infd);
 void ExePipeTail(int *pipefds, int infd);
 void ExePipeMiddle(int *pipefds, int infd);
 
+void DoExecvp(char* process, char** arg);

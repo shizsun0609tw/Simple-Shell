@@ -156,7 +156,7 @@ void ExeChild(char** process, int *pipefds, int infd, char* redirection, int isH
 
 	if (isRedirection == 1) ExeRedirection(pipefds, infd, redirection);
 
-	if (isPipe == 0 || isRedirection == 1) execvp(process[0], process);
+	if (isPipe == 0 || isRedirection == 1) DoExecvp(process[0], process);
 
 	if (isPipe == 1) ExePipe(process, pipefds, infd, isHead, isTail);
 }
@@ -208,7 +208,7 @@ void ExePipe(char** process, int *pipefds, int infd, int isHead, int isTail)
 		ExePipeMiddle(pipefds, infd);
 	}
 	
-	execvp(process[0], process);
+	DoExecvp(process[0], process);
 }
 
 void ExePipeHead(int *pipefds, int infd)
@@ -237,4 +237,13 @@ void ExePipeMiddle(int *pipefds, int infd)
 	dup2(pipefds[1], STDOUT_FILENO);
 	close(infd);
 	close(pipefds[1]);
+}
+
+void DoExecvp(char* process, char** arg)
+{
+	if(execvp(process, arg) == -1)
+	{
+		fprintf(stderr, "Unknown command: [%s].\n", process);
+		exit(EXIT_FAILURE);
+	}
 }
