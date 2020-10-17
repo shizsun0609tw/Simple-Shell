@@ -21,7 +21,7 @@ void Execute(struct command input)
 		
 		if (strcmp(separation, "|") == 0) 
 		{
-			pastReadFd = ExePipe(process1, pastReadFd, isHead);
+			pastReadFd = ExeProcessPipe(process1, pastReadFd, isHead);
 		}
 
 		isHead = 0;
@@ -68,7 +68,7 @@ char** CommandProcessing(struct command *input, char** oSeparation, char** oRedi
 	return process;
 }
 
-int ExePipe(char** process, int pastReadFd, int isHead)
+int ExeProcessPipe(char** process, int pastReadFd, int isHead)
 {
 	int* pipefds = (int*)malloc(sizeof(int) * 2);
 	int readFd;
@@ -116,20 +116,7 @@ void ExeChild(char** process, int *pipefds, int infd, char* redirection, int isH
 
 	if (isPipe == 0 || isRedirection == 1) execvp(process[0], process);
 
-	if (isHead)
-	{	
-		ExePipeHead(pipefds, infd);
-	}
-	else if (isTail)
-	{
-		ExePipeTail(pipefds, infd);	
-	}
-	else
-	{
-		ExePipeMiddle(pipefds, infd);
-	}
-	
-	execvp(process[0], process);
+	if (isPipe == 1) ExePipe(process, pipefds, infd, isHead, isTail);
 }
 
 void ExeParent(char** process, pid_t pid, int *pipefds)
@@ -162,6 +149,24 @@ void ExeRedirection(int *pipefds, int infd, char* redirection)
 
 	close(infd);
 	close(fd);
+}
+
+void ExePipe(char** process, int *pipefds, int infd, int isHead, int isTail)
+{
+	if (isHead)
+	{
+		ExePipeHead(pipefds, infd);
+	}
+	else if (isTail)
+	{
+		ExePipeTail(pipefds, infd);
+	}
+	else
+	{
+		ExePipeMiddle(pipefds, infd);
+	}
+	
+	execvp(process[0], process);
 }
 
 void ExePipeHead(int *pipefds, int infd)
