@@ -9,4 +9,12 @@ struct command{
 	char** token;
 };
 
+struct enviromentParameter{
+	size_t number;
+	size_t maxSize;
+	char** parameter;
+};
+
 struct command ParseCommand(char* buffer);
+struct command ParseEnviromentParameter(char* buffer);
+

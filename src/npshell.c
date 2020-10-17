@@ -3,6 +3,11 @@
 #include "parser.h"
 #include "process.h"
 
+void InitPath()
+{
+	setenv("PATH", "/bin/", 1);	
+}
+
 void ShellMainLoop()
 {
 	while(1)
@@ -21,8 +26,10 @@ void ShellMainLoop()
 	}		
 }
 
-int main(int argc, char ** argv, char ** envp)
+int main(int argc, char **argv, char **envp)
 {
+	InitPath();	
+
 	printf("Welcom to Shell\n");
 
 	ShellMainLoop();	

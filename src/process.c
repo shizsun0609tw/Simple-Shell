@@ -91,6 +91,21 @@ int ExeProcessPipe(char** process, int pastReadFd, int isHead)
 
 void ExeProcess(char** process, int *pipefds, int infd, char* redirection, int isHead, int isTail)
 {
+	if (strcmp(process[0], "exit") == 0)
+	{
+		ExeExit();
+	}
+	else if (strcmp(process[0], "printenv") == 0)
+	{
+		ExePrintEnv(process);
+		return;
+	}
+	else if (strcmp(process[0], "setenv") == 0)
+	{
+		ExeSetEnv(process);
+		return;
+	}
+
 	pid_t pid = fork();
 	
 	switch(pid)
@@ -104,6 +119,33 @@ void ExeProcess(char** process, int *pipefds, int infd, char* redirection, int i
 		default:
 			ExeParent(process, pid, pipefds);
 			break;
+	}
+}
+
+void ExeExit(char** process)
+{
+	exit(EXIT_SUCCESS);
+}
+
+void ExeSetEnv(char** process)
+{
+	if (process[1] == NULL || process[2] == NULL) return;
+
+	if (setenv(process[1], process[2], 1) == -1)
+	{
+		printf("setenv error\n");
+	}	
+}
+
+void ExePrintEnv(char** process)
+{
+	char* env;
+	
+	if (process[1] != NULL)
+	{
+		env = getenv(process[1]);
+		
+		printf("%s\n", (env == NULL ? "parameter not found" : env));	
 	}
 }
 

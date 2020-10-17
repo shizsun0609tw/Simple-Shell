@@ -12,6 +12,11 @@ int  ExeProcessPipe(char** process, int pastReadFd, int isHead);
 
 void ExeProcess(char** process, int *pipefds, int infd, char* redirection, int isHead, int isTail);
 
+void ExeExit();
+
+void ExeSetEnv(char** process);
+void ExePrintEnv(char** process);
+
 void ExeChild(char** process, int *pipefds, int infd, char* redirection, int isHead, int isTail);
 void ExeParent(char** process, pid_t pid, int *pipefds);
 
