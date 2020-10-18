@@ -28,7 +28,7 @@ void ExeSetEnv(char** process);
 void ExePrintEnv(char** process);
 
 void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation, int numberPipefd, char* redirection, int isHead, int isTail);
-void ExeParent(char** process, pid_t pid, int *pipefds, int isNumberPipe, int numberPipefd);
+void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPipe, int numberPipefd);
 
 void ExeRedirection(int *pipefds, int fd, char* redirection);
 

@@ -31,7 +31,7 @@ void Execute(struct command input)
 	int numberPipefd = 0;
 	int pastReadFd = 0;
 	int isHead = 1;
-	
+
 	if (IsAlreadyInit == 0)
 	{
 		InitPipeTable(&numberPipeTable, 1001);
@@ -48,7 +48,8 @@ void Execute(struct command input)
 		
 		if (strcmp(separation, "|") == 0) 
 		{
-			pastReadFd = ExeProcessPipe(process1, pastReadFd, separation, numberPipefd, isHead);
+			pastReadFd = ExeProcessPipe(process1, pastReadFd, NULL, numberPipefd, isHead);
+			numberPipefd = 0;
 		}
 
 		isHead = 0;
@@ -57,7 +58,7 @@ void Execute(struct command input)
 	}
 		
 	if (numberPipe > 0)
-	{
+	{	
 		ExeProcessNumberPipe(process1, pastReadFd, &numberPipeTable, separation, numberPipe, isHead);
 	}
 	else 
@@ -178,7 +179,7 @@ void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparati
 		ExeSetEnv(process);
 		return;
 	}
-
+	
 	pid_t pid = fork();
 	
 	switch(pid)
@@ -190,7 +191,7 @@ void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparati
 			ExeChild(process, pipefds, infd, numberPipeSeparation, numberPipefd, redirection, isHead, isTail);
 			break;
 		default:
-			ExeParent(process, pid, pipefds, (numberPipeSeparation != NULL), numberPipefd);
+			ExeParent(process, pid, pipefds, infd, (numberPipeSeparation != NULL), numberPipefd);
 			break;
 	}
 }
@@ -222,7 +223,7 @@ void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation
 {
 	int isPipe = (isHead && isTail ? 0 : 1);
 	int isRedirection = (redirection != NULL ? 1 : 0);
-		
+			
 	if (numberPipefd > 0) ExeNumberPipe(numberPipefd);
 	
 	if (isRedirection == 1) ExeRedirection(pipefds, infd, redirection);
@@ -234,25 +235,27 @@ void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation
 	if (isPipe == 1) ExePipe(process, pipefds, infd, numberPipeSeparation, isHead, isTail);
 }
 
-void ExeParent(char** process, pid_t pid, int *pipefds, int isNumberPipe, int numberPipefd)
+void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPipe, int numberPipefd)
 {
 	pid_t waitPid;
 	int status;
 
 	if (numberPipefd > 0) close(numberPipefd);
 	if (pipefds != NULL && isNumberPipe == 0) close(pipefds[1]);
-	
+	if (infd > 0) close(infd);
+
 	while(1)
 	{
 		waitPid = waitpid(pid, &status, WNOHANG);
 		
 		if (waitPid == pid) break;
 	}
+
 }
 
 void ExeRedirection(int *pipefds, int infd, char* redirection)
 {
-	int fd = open(redirection, O_APPEND | O_CREAT | O_WRONLY, 0644); 
+	int fd = open(redirection, O_TRUNC | O_CREAT | O_WRONLY, 0644); 
 		
 	dup2(fd, STDOUT_FILENO);
 	dup2(infd, STDIN_FILENO);
@@ -274,8 +277,7 @@ void ExePipe(char** process, int *pipefds, int infd, char* numberPipeSeparation,
 		ExePipeHead(pipefds, numberPipeSeparation, infd);
 	}
 	else if (isTail)
-	{
-		
+	{	
 		ExePipeTail(pipefds, infd);
 	}
 	else
@@ -299,7 +301,6 @@ void ExePipeHead(int *pipefds, char* numberPipeSeparation, int infd)
 	
 	if (numberPipeSeparation != NULL && numberPipeSeparation[0] == '!') 
 	{
-		printf("test\n");
 		dup2(pipefds[1], STDERR_FILENO);
 	}
 	close(pipefds[1]);
@@ -324,7 +325,6 @@ void ExePipeMiddle(int *pipefds, char* numberPipeSeparation, int infd)
 	dup2(pipefds[1], STDOUT_FILENO);
 	if (numberPipeSeparation != NULL && numberPipeSeparation[0] == '!')
 	{
-		printf("test2\n");
 		dup2(pipefds[1], STDERR_FILENO);
 	}
 	close(infd);
