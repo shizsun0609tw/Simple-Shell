@@ -58,11 +58,11 @@ void Execute(struct command input)
 	
 	if (numberPipe > 0)
 	{
-		ExeProcessNumberPipe(process1, pastReadFd, &numberPipeTable, numberPipe, isHead);
+		ExeProcessNumberPipe(process1, pastReadFd, &numberPipeTable, separation, numberPipe, isHead);
 	}
 	else 
 	{
-		ExeProcess(process1, NULL, pastReadFd, 0, numberPipefd, redirection, isHead, 1);
+		ExeProcess(process1, NULL, pastReadFd, NULL, numberPipefd, redirection, isHead, 1);
 	}
 	
 	if (pastReadFd != 0) close(pastReadFd);
@@ -128,7 +128,7 @@ int ExeProcessPipe(char** process, int pastReadFd, int isHead)
 		printf("pipe error\n");
 	}
 	
-	ExeProcess(process, pipefds, pastReadFd, 0, 0, NULL, isHead, 0);
+	ExeProcess(process, pipefds, pastReadFd, NULL, 0, NULL, isHead, 0);
 
 	readFd = pipefds[0];
 
@@ -139,7 +139,7 @@ int ExeProcessPipe(char** process, int pastReadFd, int isHead)
 	return readFd;	
 }
 
-void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numberPipeTable, int line, int isHead)
+void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numberPipeTable, char* separation, int line, int isHead)
 {
 	int* pipefds = (int*)malloc(sizeof(int) * 2);
 
@@ -155,12 +155,12 @@ void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numb
 		pipefds[1] = numberPipeTable->lineCountTable[line][1];
 	}
 	
-	ExeProcess(process, pipefds, pastReadFd, 1, 0, NULL, isHead, 0);
+	ExeProcess(process, pipefds, pastReadFd, separation, 0, NULL, isHead, 0);
 	
 	free(pipefds);
 }
 
-void ExeProcess(char** process, int *pipefds, int infd, int isNumberPipe, int numberPipefd, char* redirection, int isHead, int isTail)
+void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparation, int numberPipefd, char* redirection, int isHead, int isTail)
 {
 	if (strcmp(process[0], "exit") == 0)
 	{
@@ -189,10 +189,10 @@ void ExeProcess(char** process, int *pipefds, int infd, int isNumberPipe, int nu
 			printf("fork error\n");
 			break;
 		case 0:
-			ExeChild(process, pipefds, infd, numberPipefd, redirection, isHead, isTail);
+			ExeChild(process, pipefds, infd, numberPipeSeparation, numberPipefd, redirection, isHead, isTail);
 			break;
 		default:
-			ExeParent(process, pid, pipefds, isNumberPipe, numberPipefd);
+			ExeParent(process, pid, pipefds, (numberPipeSeparation != NULL), numberPipefd);
 			break;
 	}
 }
@@ -220,11 +220,11 @@ void ExePrintEnv(char** process)
 	}
 }
 
-void ExeChild(char** process, int *pipefds, int infd, int numberPipefd, char* redirection, int isHead, int isTail)
+void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation, int numberPipefd, char* redirection, int isHead, int isTail)
 {
 	int isPipe = (isHead && isTail ? 0 : 1);
 	int isRedirection = (redirection != NULL ? 1 : 0);
-
+	
 	if (numberPipefd > 0) ExeNumberPipe(numberPipefd);
 	
 	if (isRedirection == 1) ExeRedirection(pipefds, infd, redirection);
@@ -233,7 +233,7 @@ void ExeChild(char** process, int *pipefds, int infd, int numberPipefd, char* re
 	
 	if (isPipe == 0 || isRedirection == 1) DoExecvp(process[0], process);
 	
-	if (isPipe == 1) ExePipe(process, pipefds, infd, isHead, isTail);
+	if (isPipe == 1) ExePipe(process, pipefds, infd, numberPipeSeparation, isHead, isTail);
 }
 
 void ExeParent(char** process, pid_t pid, int *pipefds, int isNumberPipe, int numberPipefd)
@@ -269,11 +269,11 @@ void ExeRedirection(int *pipefds, int infd, char* redirection)
 	close(fd);
 }
 
-void ExePipe(char** process, int *pipefds, int infd, int isHead, int isTail)
+void ExePipe(char** process, int *pipefds, int infd, char* numberPipeSeparation, int isHead, int isTail)
 {	
 	if (isHead)
 	{
-		ExePipeHead(pipefds, infd);
+		ExePipeHead(pipefds, numberPipeSeparation, infd);
 	}
 	else if (isTail)
 	{
@@ -281,7 +281,7 @@ void ExePipe(char** process, int *pipefds, int infd, int isHead, int isTail)
 	}
 	else
 	{
-		ExePipeMiddle(pipefds, infd);
+		ExePipeMiddle(pipefds, numberPipeSeparation, infd);
 	}
 	
 	DoExecvp(process[0], process);
@@ -293,10 +293,12 @@ void ExeNumberPipe(int numberPipefd)
 	close(numberPipefd);
 }
 
-void ExePipeHead(int *pipefds, int infd)
+void ExePipeHead(int *pipefds, char* numberPipeSeparation, int infd)
 {	
 	close(pipefds[0]);
 	dup2(pipefds[1], STDOUT_FILENO);
+	if (numberPipeSeparation != NULL && strcmp(numberPipeSeparation, "!") == 0) dup2(pipefds[1], STDERR_FILENO);
+
 	close(pipefds[1]);
 }
 
@@ -312,11 +314,12 @@ void ExePipeTail(int *pipefds, int infd)
 	close(infd);
 }
 
-void ExePipeMiddle(int *pipefds, int infd)
+void ExePipeMiddle(int *pipefds, char* numberPipeSeparation, int infd)
 {
 	if (pipefds[0] != 0) close(pipefds[0]);
 	dup2(infd, STDIN_FILENO);
 	dup2(pipefds[1], STDOUT_FILENO);
+	if (numberPipeSeparation != NULL && strcmp(numberPipeSeparation, "!") == 0) dup2(pipefds[1], STDERR_FILENO);
 	close(infd);
 	close(pipefds[1]);
 }
