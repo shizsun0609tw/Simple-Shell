@@ -7,7 +7,7 @@ struct command ParseCommand(char* buffer)
 {
 	struct command input;
 
-	char* digit = " \n";
+	char* digit = " \f\r\t\v\n";
 	char* tempToken;
 
 	input.tokenNumber = 0;
@@ -38,7 +38,7 @@ struct command ParseCommand(char* buffer)
 
 int IsNumberPipe(char* buffer, int *oNumber)
 {
-	if (strlen(buffer) < 2) return 0;
+	if (strlen(buffer) < 2 || (buffer[0] != '|' && buffer[0] != '!')) return 0;
 
 	*oNumber = atoi(buffer + 1);
 

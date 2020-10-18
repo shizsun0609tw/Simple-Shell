@@ -18,7 +18,7 @@ char** CommandProcessing(struct command *input, char** oSeparation, char** oRedi
 void AddNumberPipe(struct pipeTable *numberPipeTable, int fd, int number);
 void UpdateNumberPipe(struct pipeTable *numberPipeTable, int *ofds);
 
-int  ExeProcessPipe(char** process, int pastReadFd, int isHead);
+int  ExeProcessPipe(char** process, int pastReadFd, char* numberPipeSeparation, int numberPipefd, int isHead);
 void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numberPipeTable, char* separation, int line, int isHead);
 void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparation, int numberPipefd, char* redirection, int isHead, int isTail);
 

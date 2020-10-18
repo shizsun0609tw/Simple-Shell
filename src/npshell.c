@@ -6,7 +6,7 @@
 
 void InitPath()
 {
-	setenv("PATH", "/bin/", 1);	
+	setenv("PATH", "bin:.", 1);	
 }
 
 void ShellMainLoop()
@@ -36,8 +36,6 @@ void ShellMainLoop()
 int main(int argc, char **argv, char **envp)
 {
 	InitPath();	
-
-	printf("Welcom to Shell\n");
 
 	ShellMainLoop();	
 

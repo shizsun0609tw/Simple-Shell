@@ -40,22 +40,22 @@ void Execute(struct command input)
 
 	process1 = CommandProcessing(&input, &separation, &redirection, &numberPipe);
 
+	UpdateNumberPipe(&numberPipeTable, &numberPipefd);
+	
 	while(input.currentCommandNumber != input.tokenNumber)
 	{
 		char** process2 = CommandProcessing(&input, &separation, &redirection, &numberPipe);	
 		
 		if (strcmp(separation, "|") == 0) 
 		{
-			pastReadFd = ExeProcessPipe(process1, pastReadFd, isHead);
+			pastReadFd = ExeProcessPipe(process1, pastReadFd, separation, numberPipefd, isHead);
 		}
 
 		isHead = 0;
 		free(process1);
 		process1 = process2;
 	}
-
-	UpdateNumberPipe(&numberPipeTable, &numberPipefd);	
-	
+		
 	if (numberPipe > 0)
 	{
 		ExeProcessNumberPipe(process1, pastReadFd, &numberPipeTable, separation, numberPipe, isHead);
@@ -81,8 +81,9 @@ char** CommandProcessing(struct command *input, char** oSeparation, char** oRedi
 		
 		if (strcmp(argTemp, "|") == 0 || IsNumberPipe(argTemp, oNumberPipe))
 		{
-			if (strcmp(argTemp, "!") == 0) *oSeparation = "!";
+			if (argTemp[0] == '!') *oSeparation = "!";
 			else *oSeparation = "|";
+			
 			process[count] = NULL;
 			++input->currentCommandNumber;		
 	
@@ -118,17 +119,18 @@ void UpdateNumberPipe(struct pipeTable *numberPipeTable, int* ofd)
 	}
 }
 
-int ExeProcessPipe(char** process, int pastReadFd, int isHead)
+int ExeProcessPipe(char** process, int pastReadFd, char* numberPipeSeparation, int numberPipefd, int isHead)
 {
 	int* pipefds = (int*)malloc(sizeof(int) * 2);
 	int readFd;
+	
 
 	if (pipe(pipefds) == -1)
 	{
 		printf("pipe error\n");
 	}
-	
-	ExeProcess(process, pipefds, pastReadFd, NULL, 0, NULL, isHead, 0);
+
+	ExeProcess(process, pipefds, pastReadFd, numberPipeSeparation, numberPipefd, NULL, isHead, 0);
 
 	readFd = pipefds[0];
 
@@ -154,7 +156,7 @@ void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numb
 		pipefds[0] = numberPipeTable->lineCountTable[line][0];
 		pipefds[1] = numberPipeTable->lineCountTable[line][1];
 	}
-	
+
 	ExeProcess(process, pipefds, pastReadFd, separation, 0, NULL, isHead, 0);
 	
 	free(pipefds);
@@ -175,10 +177,6 @@ void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparati
 	{
 		ExeSetEnv(process);
 		return;
-	}
-	else if (strcmp(process[0], "number") == 0)
-	{	
-		printf("number\n");
 	}
 
 	pid_t pid = fork();
@@ -203,7 +201,7 @@ void ExeExit(char** process)
 }
 
 void ExeSetEnv(char** process)
-{
+{	
 	if (process[1] == NULL || process[2] == NULL) return;
 
 	setenv(process[1], process[2], 1);	
@@ -224,7 +222,7 @@ void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation
 {
 	int isPipe = (isHead && isTail ? 0 : 1);
 	int isRedirection = (redirection != NULL ? 1 : 0);
-	
+		
 	if (numberPipefd > 0) ExeNumberPipe(numberPipefd);
 	
 	if (isRedirection == 1) ExeRedirection(pipefds, infd, redirection);
@@ -277,6 +275,7 @@ void ExePipe(char** process, int *pipefds, int infd, char* numberPipeSeparation,
 	}
 	else if (isTail)
 	{
+		
 		ExePipeTail(pipefds, infd);
 	}
 	else
@@ -297,8 +296,12 @@ void ExePipeHead(int *pipefds, char* numberPipeSeparation, int infd)
 {	
 	close(pipefds[0]);
 	dup2(pipefds[1], STDOUT_FILENO);
-	if (numberPipeSeparation != NULL && strcmp(numberPipeSeparation, "!") == 0) dup2(pipefds[1], STDERR_FILENO);
-
+	
+	if (numberPipeSeparation != NULL && numberPipeSeparation[0] == '!') 
+	{
+		printf("test\n");
+		dup2(pipefds[1], STDERR_FILENO);
+	}
 	close(pipefds[1]);
 }
 
@@ -319,7 +322,11 @@ void ExePipeMiddle(int *pipefds, char* numberPipeSeparation, int infd)
 	if (pipefds[0] != 0) close(pipefds[0]);
 	dup2(infd, STDIN_FILENO);
 	dup2(pipefds[1], STDOUT_FILENO);
-	if (numberPipeSeparation != NULL && strcmp(numberPipeSeparation, "!") == 0) dup2(pipefds[1], STDERR_FILENO);
+	if (numberPipeSeparation != NULL && numberPipeSeparation[0] == '!')
+	{
+		printf("test2\n");
+		dup2(pipefds[1], STDERR_FILENO);
+	}
 	close(infd);
 	close(pipefds[1]);
 }
