@@ -32,6 +32,15 @@ struct command ParseCommand(char* buffer)
 		
 		tempToken = strtok(NULL, digit);
 	}
-
+	
 	return input;
+}
+
+int IsNumberPipe(char* buffer, int *oNumber)
+{
+	if (strlen(buffer) < 2) return 0;
+
+	*oNumber = atoi(buffer + 1);
+
+	return (*oNumber > 0 ? 1 : 0);	
 }

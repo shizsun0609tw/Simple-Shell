@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "parser.h"
 #include "process.h"
@@ -14,19 +15,21 @@ void ShellMainLoop()
 	{
 		printf("%% ");
 		
-		char *buffer;
+		char *buffer = NULL;
 		struct command input;
 		size_t index = 0;
-		
+						
 		if (getline(&buffer, &index, stdin) == EOF)
 		{
 			printf("\n");
 			break;
 		}
-		
+				
 		input = ParseCommand(buffer);		
+
+		if(input.tokenNumber != 0) Execute(input);		
 		
-		Execute(input);	
+		free(buffer);
 	}		
 }
 
