@@ -62,7 +62,7 @@ void Execute(struct command input)
 	}
 	else 
 	{
-		ExeProcess(process1, NULL, pastReadFd, numberPipefd, redirection, isHead, 1);
+		ExeProcess(process1, NULL, pastReadFd, 0, numberPipefd, redirection, isHead, 1);
 	}
 	
 	if (pastReadFd != 0) close(pastReadFd);
@@ -81,7 +81,8 @@ char** CommandProcessing(struct command *input, char** oSeparation, char** oRedi
 		
 		if (strcmp(argTemp, "|") == 0 || IsNumberPipe(argTemp, oNumberPipe))
 		{
-			*oSeparation = "|";
+			if (strcmp(argTemp, "!") == 0) *oSeparation = "!";
+			else *oSeparation = "|";
 			process[count] = NULL;
 			++input->currentCommandNumber;		
 	
@@ -127,7 +128,7 @@ int ExeProcessPipe(char** process, int pastReadFd, int isHead)
 		printf("pipe error\n");
 	}
 	
-	ExeProcess(process, pipefds, pastReadFd, 0, NULL, isHead, 0);
+	ExeProcess(process, pipefds, pastReadFd, 0, 0, NULL, isHead, 0);
 
 	readFd = pipefds[0];
 
@@ -154,12 +155,12 @@ void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numb
 		pipefds[1] = numberPipeTable->lineCountTable[line][1];
 	}
 	
-	ExeProcess(process, pipefds, pastReadFd, 0, NULL, isHead, 0);
+	ExeProcess(process, pipefds, pastReadFd, 1, 0, NULL, isHead, 0);
 	
 	free(pipefds);
 }
 
-void ExeProcess(char** process, int *pipefds, int infd, int numberPipefd, char* redirection, int isHead, int isTail)
+void ExeProcess(char** process, int *pipefds, int infd, int isNumberPipe, int numberPipefd, char* redirection, int isHead, int isTail)
 {
 	if (strcmp(process[0], "exit") == 0)
 	{
@@ -191,7 +192,7 @@ void ExeProcess(char** process, int *pipefds, int infd, int numberPipefd, char* 
 			ExeChild(process, pipefds, infd, numberPipefd, redirection, isHead, isTail);
 			break;
 		default:
-			ExeParent(process, pid, pipefds, numberPipefd);
+			ExeParent(process, pid, pipefds, isNumberPipe, numberPipefd);
 			break;
 	}
 }
@@ -235,13 +236,14 @@ void ExeChild(char** process, int *pipefds, int infd, int numberPipefd, char* re
 	if (isPipe == 1) ExePipe(process, pipefds, infd, isHead, isTail);
 }
 
-void ExeParent(char** process, pid_t pid, int *pipefds, int numberPipefd)
+void ExeParent(char** process, pid_t pid, int *pipefds, int isNumberPipe, int numberPipefd)
 {
 	pid_t waitPid;
 	int status;
 
 	if (numberPipefd > 0) close(numberPipefd);
-
+	if (pipefds != NULL && isNumberPipe == 0) close(pipefds[1]);
+	
 	while(1)
 	{
 		waitPid = waitpid(pid, &status, WNOHANG);
