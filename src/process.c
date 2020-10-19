@@ -109,7 +109,10 @@ void UpdateNumberPipe(struct pipeTable *numberPipeTable, int* ofd)
 {
 	for(int i = 1; i < numberPipeTable->tableSize; ++i)
 	{	
-		numberPipeTable->lineCountTable[i - 1] = numberPipeTable->lineCountTable[i];		
+		numberPipeTable->lineCountTable[i - 1][0] = numberPipeTable->lineCountTable[i][0];
+		numberPipeTable->lineCountTable[i - 1][1] = numberPipeTable->lineCountTable[i][1];
+		numberPipeTable->lineCountTable[i][0] = 0;
+		numberPipeTable->lineCountTable[i][1] = 0;
 	}
 
 	if (numberPipeTable->lineCountTable[0][0] != 0) 
@@ -130,7 +133,7 @@ int ExeProcessPipe(char** process, int pastReadFd, char* numberPipeSeparation, i
 	{
 		printf("pipe error\n");
 	}
-	printf("%d, %d\n", pipefds[0], pipefds[1]); 
+ 
 	ExeProcess(process, pipefds, pastReadFd, numberPipeSeparation, numberPipefd, NULL, isHead, 0);
 
 	readFd = pipefds[0];
@@ -231,7 +234,7 @@ void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation
 {
 	int isPipe = (isHead && isTail ? 0 : 1);
 	int isRedirection = (redirection != NULL ? 1 : 0);
-			
+		
 	if (numberPipefd > 0) ExeNumberPipe(numberPipefd);
 	
 	if (isRedirection == 1) ExeRedirection(pipefds, infd, redirection);
@@ -256,9 +259,14 @@ void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPi
 void ExeRedirection(int *pipefds, int infd, char* redirection)
 {
 	int fd = open(redirection, O_TRUNC | O_CREAT | O_WRONLY, 0644); 
-		
+
 	dup2(fd, STDOUT_FILENO);
-	dup2(infd, STDIN_FILENO);
+	
+	if (infd > 0) 
+	{
+		dup2(infd, STDIN_FILENO);
+		close(infd);
+	}
 
 	if (pipefds != NULL)
 	{
@@ -266,7 +274,6 @@ void ExeRedirection(int *pipefds, int infd, char* redirection)
 		close(pipefds[1]);
 	}
 
-	close(infd);
 	close(fd);
 }
 
