@@ -59,7 +59,7 @@ void Execute(struct command input)
 		
 	if (numberPipe > 0)
 	{	
-		ExeProcessNumberPipe(process1, pastReadFd, &numberPipeTable, separation, numberPipe, isHead);
+		ExeProcessNumberPipe(process1, pastReadFd, &numberPipeTable, numberPipefd, separation, numberPipe, isHead);
 	}
 	else 
 	{
@@ -142,13 +142,14 @@ int ExeProcessPipe(char** process, int pastReadFd, char* numberPipeSeparation, i
 	return readFd;	
 }
 
-void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numberPipeTable, char* separation, int line, int isHead)
+void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numberPipeTable, int numberPipefd, char* separation, int line, int isHead)
 {
 	int* pipefds = (int*)malloc(sizeof(int) * 2);
 
 	if (numberPipeTable->lineCountTable[line][0] == 0)
 	{
 		pipe(pipefds);
+		
 		numberPipeTable->lineCountTable[line][0] = pipefds[0];
 		numberPipeTable->lineCountTable[line][1] = pipefds[1];
 	}
@@ -158,7 +159,7 @@ void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numb
 		pipefds[1] = numberPipeTable->lineCountTable[line][1];
 	}
 
-	ExeProcess(process, pipefds, pastReadFd, separation, 0, NULL, isHead, 0);
+	ExeProcess(process, pipefds, pastReadFd, separation, numberPipefd, NULL, isHead, 0);
 	
 	free(pipefds);
 }
@@ -182,16 +183,23 @@ void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparati
 	
 	pid_t pid = fork();
 	
+	if (pid == -1) 
+	{
+		ExeWait(pid);
+		pid = fork();
+	}
+
 	switch(pid)
 	{
 		case -1:
+			
 			printf("fork error\n");
 			break;
 		case 0:
 			ExeChild(process, pipefds, infd, numberPipeSeparation, numberPipefd, redirection, isHead, isTail);
 			break;
 		default:
-			ExeParent(process, pid, pipefds, infd, (numberPipeSeparation != NULL), numberPipefd);
+			ExeParent(process, pid, pipefds, infd, (numberPipeSeparation != NULL), numberPipefd, isTail);
 			break;
 	}
 }
@@ -235,7 +243,7 @@ void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation
 	if (isPipe == 1) ExePipe(process, pipefds, infd, numberPipeSeparation, isHead, isTail);
 }
 
-void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPipe, int numberPipefd)
+void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPipe, int numberPipefd, int isTail)
 {
 	pid_t waitPid;
 	int status;
@@ -244,13 +252,8 @@ void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPi
 	if (pipefds != NULL && isNumberPipe == 0) close(pipefds[1]);
 	if (infd > 0) close(infd);
 
-	while(1)
-	{
-		waitPid = waitpid(pid, &status, WNOHANG);
-		
-		if (waitPid == pid) break;
-	}
-
+	if (isTail == 0) return;
+	else ExeWait(pid);
 }
 
 void ExeRedirection(int *pipefds, int infd, char* redirection)
@@ -329,6 +332,19 @@ void ExePipeMiddle(int *pipefds, char* numberPipeSeparation, int infd)
 	}
 	close(infd);
 	close(pipefds[1]);
+}
+
+void ExeWait(pid_t pid)
+{
+	int status;
+	int waitPID;
+	
+	while(1)
+	{
+		waitPID = waitpid(pid, &status, WNOHANG);
+
+		if (waitPID == pid) break;
+	}
 }
 
 void DoExecvp(char* process, char** arg)
