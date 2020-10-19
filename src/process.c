@@ -130,7 +130,7 @@ int ExeProcessPipe(char** process, int pastReadFd, char* numberPipeSeparation, i
 	{
 		printf("pipe error\n");
 	}
-
+	printf("%d, %d\n", pipefds[0], pipefds[1]); 
 	ExeProcess(process, pipefds, pastReadFd, numberPipeSeparation, numberPipefd, NULL, isHead, 0);
 
 	readFd = pipefds[0];
@@ -245,9 +245,6 @@ void ExeChild(char** process, int *pipefds, int infd, char* numberPipeSeparation
 
 void ExeParent(char** process, pid_t pid, int *pipefds, int infd, int isNumberPipe, int numberPipefd, int isTail)
 {
-	pid_t waitPid;
-	int status;
-
 	if (numberPipefd > 0) close(numberPipefd);
 	if (pipefds != NULL && isNumberPipe == 0) close(pipefds[1]);
 	if (infd > 0) close(infd);
