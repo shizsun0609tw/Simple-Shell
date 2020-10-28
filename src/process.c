@@ -167,6 +167,22 @@ void ExeProcessNumberPipe(char** process, int pastReadFd, struct pipeTable *numb
 	free(pipefds);
 }
 
+void ExeSource(char** process)
+{
+	FILE *fp = fopen(process[1], "r");
+	char* buffer = NULL;
+	size_t buffer_size = 0;
+	int line_size = 0;
+
+	line_size = getline(&buffer, &buffer_size, fp);
+
+	while(line_size > 0)
+	{
+		Execute(ParseCommand(buffer));
+		line_size = getline(&buffer, &buffer_size, fp);
+	}	
+}
+
 void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparation, int numberPipefd, char* redirection, int isHead, int isTail)
 {
 	if (strcmp(process[0], "exit") == 0)
@@ -181,6 +197,11 @@ void ExeProcess(char** process, int *pipefds, int infd, char* numberPipeSeparati
 	else if (strcmp(process[0], "setenv") == 0)
 	{
 		ExeSetEnv(process);
+		return;
+	}
+	else if (strcmp(process[0], "source") == 0)
+	{
+		ExeSource(process);
 		return;
 	}
 	
